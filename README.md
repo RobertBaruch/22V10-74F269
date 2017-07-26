@@ -25,4 +25,4 @@ This is the pinout, which DOES NOT MATCH the 74F269 due to limitations in the GA
                       GND x---|12          13|---x !PE                      
                               |______________|
 
-![Breadboarded 16-bit counter](breadboard-16bit.jpg)
+![Breadboarded 16-bit counter](breadboard-16bits.jpg)
