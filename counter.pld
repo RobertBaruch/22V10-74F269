@@ -1,0 +1,113 @@
+Name        Counter, 8-bit presettable up/down synchronous;
+Date        07/23/17;
+Revision    1;
+Device      g22v10;
+
+/*
+  This work is licensed under the Creative Commons Attribution-ShareAlike 4.0
+  International License. To view a copy of this license, visit 
+  http://creativecommons.org/licenses/by-sa/4.0/ or send a letter to 
+  Creative Commons, PO Box 1866, Mountain View, CA 94042, USA.
+
+  Attribution: Robert Baruch (robert.c.baruch@gmail.com)
+*/
+
+/* 
+  See datasheet for 74F269 for signal definitions:
+  https://archive.org/details/74f269Philips
+*/
+
+/*****************************************************
+ Function table
+
+ !PE  !CEP  !CET  UP   CLK    Function
+ -------------------------------------------------
+  L     X     X    X    ^     Parallel load
+  H     H     L    X    ^     Hold
+  H     X     H    X    ^     Hold (!TC held high)
+  H     L     L    H    ^     Count up
+  H     L     L    L    ^     Count down
+
+******************************************************/
+
+/*
+  Unfortunately, the Q7 term requires 15 product terms,
+  meaning that it cannot go on pin 16 or 17. That's why
+  the outputs are not quite in order on the pinout.
+
+
+                               ______________
+                              |   Counter    |
+                      CLK x---|1           24|---x Vcc                      
+                       D0 x---|2           23|---x Q2                       
+                       D1 x---|3           22|---x Q3                       
+                       D2 x---|4           21|---x Q4                       
+                       D3 x---|5           20|---x Q5                       
+                       D4 x---|6           19|---x Q6                       
+                       D5 x---|7           18|---x Q7                       
+                       D6 x---|8           17|---x Q1                       
+                       D7 x---|9           16|---x Q0                       
+                     !CEP x---|10          15|---x !TC                      
+                     !CET x---|11          14|---x UP                       
+                      GND x---|12          13|---x !PE                      
+                              |______________|
+
+ */
+
+Pin 1 = CLK;
+Pin [18..23] = [Q7..Q2];
+Pin 17 = Q1;
+Pin 16 = Q0;
+Pin 15 = !TC;
+
+Pin [9..2] = [D7..D0];
+Pin 10 = !CEP;
+Pin 11 = !CET;
+Pin 13 = !PE;
+Pin 14 = UP;
+
+hold = !PE & (CET & !CEP # !CET);
+
+/*
+  Each bit is toggled if we are not holding and:
+     if we're counting up, all lower bits are high, or
+     if we're counting down, all lower bits are low.
+*/
+
+tog0 = !hold & (UP # !UP);
+tog1 = !hold & (UP & Q0 # !UP & !Q0);
+tog2 = !hold & (UP & Q1 & Q0 # !UP & !Q1 & !Q0);
+tog3 = !hold & (UP & Q2 & Q1 & Q0 # !UP & !Q2 & !Q1 & !Q0);
+tog4 = !hold & (UP & Q3 & Q2 & Q1 & Q0 # !UP & !Q3 & !Q2 & !Q1 & !Q0);
+tog5 = !hold & (UP & Q4 & Q3 & Q2 & Q1 & Q0 # !UP & !Q4 & !Q3 & !Q2 & !Q1 & !Q0);
+tog6 = !hold & (UP & Q5 & Q4 & Q3 & Q2 & Q1 & Q0 # !UP & !Q5 & !Q4 & !Q3 & !Q2 & !Q1 & !Q0);
+tog7 = !hold & (UP & Q6 & Q5 & Q4 & Q3 & Q2 & Q1 & Q0 # !UP & !Q6 & !Q5 & !Q4 & !Q3 & !Q2 & !Q1 & !Q0);
+
+/*
+  If we're loading, load the bits. Otherwise:
+    If we're not toggling, keep the bit the same, otherwise toggle the bit.
+*/
+
+Q0.D = D0 & PE # !PE & !tog0 & Q0 # !PE & tog0 & !Q0;
+Q1.D = D1 & PE # !PE & !tog1 & Q1 # !PE & tog1 & !Q1;
+Q2.D = D2 & PE # !PE & !tog2 & Q2 # !PE & tog2 & !Q2;
+Q3.D = D3 & PE # !PE & !tog3 & Q3 # !PE & tog3 & !Q3;
+Q4.D = D4 & PE # !PE & !tog4 & Q4 # !PE & tog4 & !Q4;
+Q5.D = D5 & PE # !PE & !tog5 & Q5 # !PE & tog5 & !Q5;
+Q6.D = D6 & PE # !PE & !tog6 & Q6 # !PE & tog6 & !Q6;
+Q7.D = D7 & PE # !PE & !tog7 & Q7 # !PE & tog7 & !Q7;
+
+FIELD count = [Q7..Q0];
+
+/*
+  TC must be low (that is, !TC must be high) when !CET & !PE. Otherwise,
+  TC is set (that is, !TC is reset) if we've reached a terminal count.
+  A terminal count is FF if we're counting up, or 00 if we're counting
+  down.
+
+  The TC signal is pretty weird. Not surprising that they
+  obsoleted the 74269.
+*/
+
+termcount = UP & count:'h'FF # !UP & count:'h'00;
+TC = (CET # PE) & termcount;
