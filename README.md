@@ -1,5 +1,5 @@
 # 22V10-74F269
-An implementation of the 74F269 bidirectional counter ([datasheet](https://archive.org/details/74f269Philips datasheet)) on a 22V10 GAL.
+An implementation of the 74F269 bidirectional counter ([datasheet](https://archive.org/details/74f269Philips)) on a 22V10 GAL.
 
 counter.pld is the original .pld file. You can use WinCUPL from Microchip to compile it to a JEDEC (.jed) file.
 
